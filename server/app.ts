@@ -1,4 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { DB } from './db.ts';
 import { EXERCISES, EXERCISE_KEYS, isExerciseKey, isTestKey, type ExerciseKey, type TestKey } from '../shared/exercises.ts';
 
@@ -284,14 +286,22 @@ export function createApp(db: DB) {
     res.json(q.session.get(id, a.id));
   });
 
-  app.delete('/api/athletes/:athleteId/sessions/:sessionId', (req, res) => {
-    const a = requireAthlete(intParam(req.params.athleteId, 'athleteId'));
-    const info = q.deleteSession.run(intParam(req.params.sessionId, 'sessionId'), a.id);
-    if (info.changes === 0) throw new HttpError(404, 'Sesión no encontrada para este deportista');
-    res.status(204).end();
-  });
+app.delete('/api/athletes/:athleteId/sessions/:sessionId', (req, res) => {
+  const a = requireAthlete(intParam(req.params.athleteId, 'athleteId'));
+  const info = q.deleteSession.run(intParam(req.params.sessionId, 'sessionId'), a.id);
+  if (info.changes === 0) throw new HttpError(404, 'Sesión no encontrada para este deportista');
+  res.status(204).end();
+});
 
-  app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Ruta no encontrada')));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+app.use(express.static(path.join(__dirname, '..', 'dist')));
+
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
+});
+
+app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Ruta no encontrada')));
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
